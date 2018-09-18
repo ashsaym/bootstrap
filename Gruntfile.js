@@ -125,11 +125,11 @@ module.exports = function (grunt) {
 
     uglify: {
       options: {
-        compress: {
-          warnings: false
-        },
+        compress: true,
         mangle: true,
-        preserveComments: /^!|@preserve|@license|@cc_on/i
+        output: {
+          comments: /^!|@preserve|@license|@cc_on/i
+        }
       },
       core: {
         src: '<%= concat.bootstrap.dest %>',
@@ -139,18 +139,20 @@ module.exports = function (grunt) {
         src: configBridge.paths.customizerJs,
         dest: 'docs/assets/js/customize.min.js'
       },
-      docsJs: {
+      docs: {
         src: configBridge.paths.docsJs,
         dest: 'docs/assets/js/docs.min.js'
       }
     },
 
     less: {
+      options: {
+        strictMath: true,
+        sourceMap: true,
+        outputSourceFiles: true
+      },
       compileCore: {
         options: {
-          strictMath: true,
-          sourceMap: true,
-          outputSourceFiles: true,
           sourceMapURL: '<%= pkg.name %>.css.map',
           sourceMapFilename: 'dist/css/<%= pkg.name %>.css.map'
         },
@@ -159,9 +161,6 @@ module.exports = function (grunt) {
       },
       compileTheme: {
         options: {
-          strictMath: true,
-          sourceMap: true,
-          outputSourceFiles: true,
           sourceMapURL: '<%= pkg.name %>-theme.css.map',
           sourceMapFilename: 'dist/css/<%= pkg.name %>-theme.css.map'
         },
@@ -170,9 +169,6 @@ module.exports = function (grunt) {
       },
       compileDocs: {
         options: {
-          strictMath: true,
-          sourceMap: true,
-          outputSourceFiles: true,
           sourceMapURL: 'docs.css.map',
           sourceMapFilename: 'docs/assets/css/docs.css.map'
         },
@@ -183,27 +179,22 @@ module.exports = function (grunt) {
 
     autoprefixer: {
       options: {
-        browsers: configBridge.config.autoprefixerBrowsers
+        browsers: configBridge.config.autoprefixerBrowsers,
+        map: true
       },
       core: {
-        options: {
-          map: true
-        },
         src: 'dist/css/<%= pkg.name %>.css'
       },
       theme: {
-        options: {
-          map: true
-        },
         src: 'dist/css/<%= pkg.name %>-theme.css'
       },
       docs: {
-        options: {
-          map: true
-        },
-        src: 'docs/assets/css/src/docs.css'
+        src: 'docs/assets/css/docs.css'
       },
       examples: {
+        options: {
+          map: false
+        },
         expand: true,
         cwd: 'docs/examples/',
         src: ['**/*.css'],
@@ -214,12 +205,7 @@ module.exports = function (grunt) {
     stylelint: {
       options: {
         configFile: 'grunt/.stylelintrc',
-        formatter: 'string',
-        ignoreDisables: false,
-        failOnError: true,
-        outputFile: '',
-        reportNeedlessDisables: false,
-        syntax: ''
+        reportNeedlessDisables: false
       },
       dist: [
         'less/**/*.less'
@@ -234,13 +220,14 @@ module.exports = function (grunt) {
 
     cssmin: {
       options: {
-        // TODO: disable `zeroUnits` optimization once clean-css 3.2 is released
-        //    and then simplify the fix for https://github.com/twbs/bootstrap/issues/14837 accordingly
         compatibility: 'ie8',
-        keepSpecialComments: '*',
         sourceMap: true,
         sourceMapInlineSources: true,
-        advanced: false
+        level: {
+          1: {
+            specialComments: 'all'
+          }
+        }
       },
       minifyCore: {
         src: 'dist/css/<%= pkg.name %>.css',
@@ -295,41 +282,6 @@ module.exports = function (grunt) {
       }
     },
 
-    htmlmin: {
-      dist: {
-        options: {
-          collapseBooleanAttributes: true,
-          collapseWhitespace: true,
-          conservativeCollapse: true,
-          decodeEntities: false,
-          minifyCSS: {
-            compatibility: 'ie8',
-            keepSpecialComments: 0
-          },
-          minifyJS: true,
-          minifyURLs: false,
-          processConditionalComments: true,
-          removeAttributeQuotes: true,
-          removeComments: true,
-          removeOptionalAttributes: true,
-          removeOptionalTags: true,
-          removeRedundantAttributes: true,
-          removeScriptTypeAttributes: true,
-          removeStyleLinkTypeAttributes: true,
-          removeTagWhitespace: false,
-          sortAttributes: true,
-          sortClassName: true
-        },
-        expand: true,
-        cwd: '_gh_pages',
-        dest: '_gh_pages',
-        src: [
-          '**/*.html',
-          '!examples/**/*.html'
-        ]
-      }
-    },
-
     pug: {
       options: {
         pretty: true,
@@ -351,7 +303,8 @@ module.exports = function (grunt) {
           'Attribute "autocomplete" not allowed on element "button" at this point.',
           'Attribute "autocomplete" is only allowed when the input type is "color", "date", "datetime", "datetime-local", "email", "hidden", "month", "number", "password", "range", "search", "tel", "text", "time", "url", or "week".',
           'Element "img" is missing required attribute "src".'
-        ]
+        ],
+        noLangDetect: true
       },
       src: '_gh_pages/**/*.html'
     },
@@ -359,11 +312,11 @@ module.exports = function (grunt) {
     watch: {
       src: {
         files: '<%= jshint.core.src %>',
-        tasks: ['jshint:core', 'exec:qunit', 'concat']
+        tasks: ['jshint:core', 'exec:karma', 'concat']
       },
       test: {
         files: '<%= jshint.test.src %>',
-        tasks: ['jshint:test', 'exec:qunit']
+        tasks: ['jshint:test', 'exec:karma']
       },
       less: {
         files: 'less/**/*.less',
@@ -376,36 +329,13 @@ module.exports = function (grunt) {
     },
 
     exec: {
-      npmUpdate: {
-        command: 'npm update'
-      },
       browserstack: {
         command: 'cross-env BROWSER=true karma start grunt/karma.conf.js'
       },
-      qunit: {
+      karma: {
         command: 'karma start grunt/karma.conf.js'
       }
-    },
-
-    compress: {
-      main: {
-        options: {
-          archive: 'bootstrap-<%= pkg.version %>-dist.zip',
-          mode: 'zip',
-          level: 9,
-          pretty: true
-        },
-        files: [
-          {
-            expand: true,
-            cwd: 'dist/',
-            src: ['**'],
-            dest: 'bootstrap-<%= pkg.version %>-dist'
-          }
-        ]
-      }
     }
-
   });
 
 
@@ -420,7 +350,7 @@ module.exports = function (grunt) {
     return !process.env.TWBS_TEST || process.env.TWBS_TEST === subset;
   };
   var isUndefOrNonZero = function (val) {
-    return val === undefined || val !== '0';
+    return typeof val === 'undefined' || val !== '0';
   };
 
   // Test task.
@@ -445,7 +375,7 @@ module.exports = function (grunt) {
   }
 
   grunt.registerTask('test', testSubtasks);
-  grunt.registerTask('test-js', ['jshint:core', 'jshint:test', 'jshint:grunt', 'jscs:core', 'jscs:test', 'jscs:grunt', 'exec:qunit']);
+  grunt.registerTask('test-js', ['jshint:core', 'jshint:test', 'jshint:grunt', 'jscs:core', 'jscs:test', 'jscs:grunt', 'exec:karma']);
 
   // JS distribution task.
   grunt.registerTask('dist-js', ['concat', 'uglify:core', 'commonjs']);
@@ -479,10 +409,10 @@ module.exports = function (grunt) {
   // Docs task.
   grunt.registerTask('docs-css', ['autoprefixer:docs', 'autoprefixer:examples', 'cssmin:minifyDocs']);
   grunt.registerTask('lint-docs-css', ['stylelint:docs', 'stylelint:examples']);
-  grunt.registerTask('docs-js', ['uglify:docsJs', 'uglify:customize']);
+  grunt.registerTask('docs-js', ['uglify:docs', 'uglify:customize']);
   grunt.registerTask('lint-docs-js', ['jshint:assets', 'jscs:assets']);
   grunt.registerTask('docs', ['docs-css', 'lint-docs-css', 'docs-js', 'lint-docs-js', 'clean:docs', 'copy:docs', 'build-glyphicons-data', 'build-customizer']);
-  grunt.registerTask('docs-github', ['jekyll:github', 'htmlmin']);
+  grunt.registerTask('docs-github', ['jekyll:github']);
 
-  grunt.registerTask('prep-release', ['dist', 'docs', 'docs-github', 'compress']);
+  grunt.registerTask('prep-release', ['dist', 'docs', 'docs-github']);
 };
