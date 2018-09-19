@@ -311,7 +311,7 @@ module.exports = function (grunt) {
         ],
         noLangDetect: true
       },
-      src: '_gh_pages/**/*.html'
+      src: ['_gh_pages/**/*.html', 'js/tests/**/*.html']
     },
 
     watch: {
