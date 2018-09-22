@@ -376,7 +376,9 @@ module.exports = function (grunt) {
   // Only run BrowserStack tests if there's a BrowserStack access key
   if (typeof process.env.BROWSER_STACK_USERNAME !== 'undefined' &&
       // Skip BrowserStack if running a different subset of the test suite
-      runSubset('browserstack')) {
+      runSubset('browserstack')) &&
+      // Skip Sauce on Travis when [skip sauce] is in the commit message
+      isUndefOrNonZero(process.env.TWBS_DO_BROWSERSTACK)) {
     testSubtasks.push('exec:browserstack');
   }
 
